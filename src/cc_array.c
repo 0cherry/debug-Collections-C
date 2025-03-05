@@ -74,20 +74,23 @@ enum cc_stat cc_array_new_conf(CC_ArrayConf const * const conf, CC_Array **out)
 
     /* The expansion factor must be greater than one for the
      * array to grow */
-    if (conf->exp_factor <= 1)
+    if (conf->exp_factor <= 1) {
         ex = DEFAULT_EXPANSION_FACTOR;
-    else
+    } else {
         ex = conf->exp_factor;
+    }
 
     /* Needed to avoid an integer overflow on the first resize and
      * to easily check for any future overflows. */
-    if (!conf->capacity || ex >= CC_MAX_ELEMENTS / conf->capacity)
+    if ((!conf->capacity) || (ex >= (CC_MAX_ELEMENTS / conf->capacity))) {
         return CC_ERR_INVALID_CAPACITY;
+    }
 
     CC_Array *ar = conf->mem_calloc(1, sizeof(CC_Array));
 
-    if (!ar)
+    if (!ar) {
         return CC_ERR_ALLOC;
+    }
 
     void **buff = conf->mem_alloc(conf->capacity * sizeof(void*));
 
@@ -193,23 +196,24 @@ enum cc_stat cc_array_add(CC_Array *ar, void *element)
  */
 enum cc_stat cc_array_add_at(CC_Array *ar, void *element, size_t index)
 {
-    if (index == ar->size)
+    if (index == ar->size) {
         return cc_array_add(ar, element);
+    }
 
-    if ((ar->size == 0 && index != 0) || index > (ar->size - 1))
+    if (((ar->size == 0) && (index != 0)) || (index > (ar->size - 1))) {
         return CC_ERR_OUT_OF_RANGE;
+    }
 
     if (ar->size >= ar->capacity) {
         enum cc_stat status = expand_capacity(ar);
-        if (status != CC_OK)
+        if (status != CC_OK) {
             return status;
     }
+    }
 
-    size_t shift = (ar->size - index) * sizeof(void*);
+    size_t shift = ((ar->size - index) * sizeof(void*));
 
-    memmove(&(ar->buffer[index + 1]),
-            &(ar->buffer[index]),
-            shift);
+    memmove(&(ar->buffer[index + 1]), &(ar->buffer[index]), shift);
 
     ar->buffer[index] = element;
     ar->size++;
@@ -244,15 +248,14 @@ enum cc_stat cc_array_replace_at(CC_Array *ar, void *element, size_t index, void
     return CC_OK;
 }
 
-enum cc_stat cc_array_swap_at(CC_Array *ar, size_t index1, size_t index2)
-{
+enum cc_stat cc_array_swap_at(CC_Array *ar, size_t index1, size_t index2) {
     void *tmp;
 
-    if (index1 >= ar->size || index2 >= ar->size)
+    if ((index1 >= ar->size) || (index2 >= ar->size)) {
         return CC_ERR_OUT_OF_RANGE;
+    }
 
     tmp = ar->buffer[index1];
-
     ar->buffer[index1] = ar->buffer[index2];
     ar->buffer[index2] = tmp;
     return CC_OK;
@@ -275,11 +278,12 @@ enum cc_stat cc_array_remove(CC_Array *ar, void *element, void **out)
     size_t index;
     enum cc_stat status = cc_array_index_of(ar, element, &index);
 
-    if (status == CC_ERR_OUT_OF_RANGE)
+    if (status == CC_ERR_OUT_OF_RANGE) {
         return CC_ERR_VALUE_NOT_FOUND;
+    }
 
-    if (index != ar->size - 1) {
-        size_t block_size = (ar->size - 1 - index) * sizeof(void*);
+    if (index != (ar->size - 1)) {  // Added parentheses around 'ar->size - 1'
+        size_t block_size = ((ar->size - 1 - index) * sizeof(void*));  // Added parentheses around the subtraction and multiplication
 
         memmove(&(ar->buffer[index]),
                 &(ar->buffer[index + 1]),
@@ -287,8 +291,9 @@ enum cc_stat cc_array_remove(CC_Array *ar, void *element, void **out)
     }
     ar->size--;
 
-    if (out)
+    if (out) {
         *out = element;
+    }
 
     return CC_OK;
 }
@@ -309,18 +314,24 @@ enum cc_stat cc_array_remove(CC_Array *ar, void *element, void **out)
 enum cc_stat cc_array_remove_at(CC_Array *ar, size_t index, void **out)
 {
     if (index >= ar->size)
+    {
         return CC_ERR_OUT_OF_RANGE;
+    }
 
     if (out)
+    {
         *out = ar->buffer[index];
+    }
 
-    if (index != ar->size - 1) {
-        size_t block_size = (ar->size - 1 - index) * sizeof(void*);
+    if (index != (ar->size - 1))
+    {
+        size_t block_size = ((ar->size - 1) - index) * sizeof(void *);
 
         memmove(&(ar->buffer[index]),
                 &(ar->buffer[index + 1]),
                 block_size);
     }
+    
     ar->size--;
 
     return CC_OK;
@@ -467,7 +478,7 @@ enum cc_stat cc_array_index_of(CC_Array *ar, void *element, size_t *index)
  */
 enum cc_stat cc_array_subarray(CC_Array *ar, size_t b, size_t e, CC_Array **out)
 {
-    if (b > e || e >= ar->size)
+if ((b > e) || (e >= ar->size))
         return CC_ERR_INVALID_RANGE;
 
     CC_Array *sub_ar = ar->mem_calloc(1, sizeof(CC_Array));
@@ -484,7 +495,7 @@ enum cc_stat cc_array_subarray(CC_Array *ar, size_t b, size_t e, CC_Array **out)
     sub_ar->mem_alloc  = ar->mem_alloc;
     sub_ar->mem_calloc = ar->mem_calloc;
     sub_ar->mem_free   = ar->mem_free;
-    sub_ar->size       = e - b + 1;
+sub_ar->size       = (e - b) + 1;
     sub_ar->capacity   = sub_ar->size;
 
     memcpy(sub_ar->buffer,
@@ -512,13 +523,16 @@ enum cc_stat cc_array_copy_shallow(CC_Array *ar, CC_Array **out)
 {
     CC_Array *copy = ar->mem_alloc(sizeof(CC_Array));
 
-    if (!copy)
+    if (copy == NULL) {
         return CC_ERR_ALLOC;
+    }
 
-    if (!(copy->buffer = ar->mem_calloc(ar->capacity, sizeof(void*)))) {
+    copy->buffer = ar->mem_calloc(ar->capacity, sizeof(void*));
+    if (copy->buffer == NULL) {
         ar->mem_free(copy);
         return CC_ERR_ALLOC;
     }
+
     copy->exp_factor = ar->exp_factor;
     copy->size       = ar->size;
     copy->capacity   = ar->capacity;
@@ -526,9 +540,7 @@ enum cc_stat cc_array_copy_shallow(CC_Array *ar, CC_Array **out)
     copy->mem_calloc = ar->mem_calloc;
     copy->mem_free   = ar->mem_free;
 
-    memcpy(copy->buffer,
-           ar->buffer,
-           copy->size * sizeof(void*));
+    memcpy(copy->buffer, ar->buffer, copy->size * sizeof(void*));
 
     *out = copy;
     return CC_OK;
@@ -556,7 +568,8 @@ enum cc_stat cc_array_copy_deep(CC_Array *ar, void *(*cp) (void *), CC_Array **o
     if (!copy)
         return CC_ERR_ALLOC;
 
-    if (!(copy->buffer = ar->mem_calloc(ar->capacity, sizeof(void*)))) {
+    copy->buffer = ar->mem_calloc(ar->capacity, sizeof(void*));
+    if (!copy->buffer) {
         ar->mem_free(copy);
         return CC_ERR_ALLOC;
     }
@@ -569,8 +582,9 @@ enum cc_stat cc_array_copy_deep(CC_Array *ar, void *(*cp) (void *), CC_Array **o
     copy->mem_free   = ar->mem_free;
 
     size_t i;
-    for (i = 0; i < copy->size; i++)
+    for (i = 0; i < copy->size; i++) {
         copy->buffer[i] = cp(ar->buffer[i]);
+    }
 
     *out = copy;
 
@@ -647,11 +661,11 @@ enum cc_stat cc_array_filter(CC_Array *ar, bool (*pred) (const void*), CC_Array 
         return CC_ERR_OUT_OF_RANGE;
 
     CC_Array *filtered = ar->mem_alloc(sizeof(CC_Array));
-
     if (!filtered)
         return CC_ERR_ALLOC;
 
-    if (!(filtered->buffer = ar->mem_calloc(ar->capacity, sizeof(void*)))) {
+    filtered->buffer = ar->mem_calloc(ar->capacity, sizeof(void*));
+    if (!filtered->buffer) {
         ar->mem_free(filtered);
         return CC_ERR_ALLOC;
     }
@@ -666,7 +680,8 @@ enum cc_stat cc_array_filter(CC_Array *ar, bool (*pred) (const void*), CC_Array 
     size_t f = 0;
     for (size_t i = 0; i < ar->size; i++) {
         if (pred(ar->buffer[i])) {
-            filtered->buffer[f++] = ar->buffer[i];
+            filtered->buffer[f] = ar->buffer[i];
+            f++; // Separate increment from assignment
             filtered->size++;
         }
     }
@@ -683,11 +698,14 @@ enum cc_stat cc_array_filter(CC_Array *ar, bool (*pred) (const void*), CC_Array 
 void cc_array_reverse(CC_Array *ar)
 {
     if (ar->size == 0)
+    {
         return;
+    }
 
     size_t i;
     size_t j;
-    for (i = 0, j = ar->size - 1; i < ar->size / 2; i++, j--) {
+    for (i = 0, j = ar->size - 1; i < (ar->size / 2); i++, j--)
+    {
         void *tmp = ar->buffer[i];
         ar->buffer[i] = ar->buffer[j];
         ar->buffer[j] = tmp;
@@ -714,7 +732,7 @@ enum cc_stat cc_array_trim_capacity(CC_Array *ar)
     if (!new_buff)
         return CC_ERR_ALLOC;
 
-    size_t size = ar->size < 1 ? 1 : ar->size;
+    size_t size = (ar->size < 1) ? 1 : ar->size;
 
     memcpy(new_buff, ar->buffer, size * sizeof(void*));
     ar->mem_free(ar->buffer);
@@ -1051,7 +1069,7 @@ void cc_array_zip_iter_init(CC_ArrayZipIter *iter, CC_Array *ar1, CC_Array *ar2)
  */
 enum cc_stat cc_array_zip_iter_next(CC_ArrayZipIter *iter, void **out1, void **out2)
 {
-    if (iter->index >= iter->ar1->size || iter->index >= iter->ar2->size)
+    if ((iter->index >= iter->ar1->size) || (iter->index >= iter->ar2->size))
         return CC_ITER_END;
 
     *out1 = iter->ar1->buffer[iter->index];
@@ -1077,12 +1095,12 @@ enum cc_stat cc_array_zip_iter_next(CC_ArrayZipIter *iter, void **out1, void **o
  */
 enum cc_stat cc_array_zip_iter_remove(CC_ArrayZipIter *iter, void **out1, void **out2)
 {
-    if ((iter->index - 1) >= iter->ar1->size || (iter->index - 1) >= iter->ar2->size)
+if (((iter->index - 1) >= iter->ar1->size) || ((iter->index - 1) >= iter->ar2->size))
         return CC_ERR_OUT_OF_RANGE;
 
     if (!iter->last_removed) {
-        cc_array_remove_at(iter->ar1, iter->index - 1, out1);
-        cc_array_remove_at(iter->ar2, iter->index - 1, out2);
+cc_array_remove_at(iter->ar1, (iter->index - 1), out1);
+cc_array_remove_at(iter->ar2, (iter->index - 1), out2);
         iter->last_removed = true;
         return CC_OK;
     }
@@ -1109,9 +1127,11 @@ enum cc_stat cc_array_zip_iter_add(CC_ArrayZipIter *iter, void *e1, void *e2)
     CC_Array  *ar2  = iter->ar2;
 
     /* Make sure both array buffers have room */
-    if ((ar1->size == ar1->capacity && (expand_capacity(ar1) != CC_OK)) ||
-            (ar2->size == ar2->capacity && (expand_capacity(ar2) != CC_OK)))
+    if (((ar1->size == ar1->capacity) && (expand_capacity(ar1) != CC_OK)) ||
+        ((ar2->size == ar2->capacity) && (expand_capacity(ar2) != CC_OK)))
+    {
         return CC_ERR_ALLOC;
+    }
 
     cc_array_add_at(ar1, e1, index);
     cc_array_add_at(ar2, e2, index);
@@ -1133,8 +1153,10 @@ enum cc_stat cc_array_zip_iter_add(CC_ArrayZipIter *iter, void *e1, void *e2)
  */
 enum cc_stat cc_array_zip_iter_replace(CC_ArrayZipIter *iter, void *e1, void *e2, void **out1, void **out2)
 {
-    if ((iter->index - 1) >= iter->ar1->size || (iter->index - 1) >= iter->ar2->size)
+    if (((iter->index - 1) >= iter->ar1->size) || ((iter->index - 1) >= iter->ar2->size)) 
+    {
         return CC_ERR_OUT_OF_RANGE;
+    }
 
     cc_array_replace_at(iter->ar1, e1, iter->index - 1, out1);
     cc_array_replace_at(iter->ar2, e2, iter->index - 1, out2);
